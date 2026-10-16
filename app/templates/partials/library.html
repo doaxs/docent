@@ -1,0 +1,50 @@
+{% from "partials/macros.html" import icon %}
+{# Library tiles. The same markup renders as the grid under the TV or the
+   full-window grid — the layout is pure CSS (.app[data-view]). Filtering and search
+   happen client-side in static/app.js off the data-* attributes. #}
+{% for a in arts %}
+{% set is_current = a.id == current_id %}
+<div class="tile{% if is_current %} current{% endif %}"
+     role="button" tabindex="0"
+     aria-label="Preview {{ a.name }}"
+     data-id="{{ a.id }}"
+     data-name="{{ a.name }}"
+     data-store="{{ 1 if a.is_store else 0 }}"
+     data-mstyle="{{ a.style }}"
+     data-mcolor="{{ a.color }}"
+     data-ago="{{ a.uploaded_at | time_ago }}"
+     data-size="{{ a.source_size }}">
+    <div class="th" style="background-image:url('/thumb/{{ a.id }}')">
+        {% if is_current %}<span class="badge"><span class="dot"></span>On TV</span>{% endif %}
+        {% if a.is_store %}<span class="store">ART STORE</span>{% endif %}
+        {% if not is_current %}
+        <button type="button" class="quick" title="Show on TV now"
+                hx-post="/image/{{ a.id }}/activate"
+                hx-target="#library"
+                hx-swap="innerHTML"
+                hx-include="#sort"
+                hx-disabled-elt="this">{{ icon("tv") }}Show on TV</button>
+        {% endif %}
+    </div>
+    <div class="cap">
+        <b>{{ a.name }}</b>
+        <span>{% if a.is_store %}Art Store{% elif a.uploaded_at %}Added {{ a.uploaded_at | time_ago }}{% else %}On your TV{% endif %}</span>
+    </div>
+</div>
+{% else %}
+<div class="lib-empty in-grid">
+    <div class="frames"><i></i><i></i><i></i></div>
+    {% if stale %}
+    <div><b>Your art lives on your TV</b><p>Once your TV is connected and awake, everything on it shows up here.</p></div>
+    {% else %}
+    <div><b>No art yet</b><p>Click <em>Add Art</em> or drop photos anywhere in this window to send them to your TV.</p></div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<span id="count-all" class="side-count" hx-swap-oob="true">{{ counts.all }}</span>
+<span id="count-mine" class="side-count" hx-swap-oob="true">{{ counts.mine }}</span>
+<span id="count-store" class="side-count" hx-swap-oob="true">{{ counts.store }}</span>
+<div id="lib-data" hidden hx-swap-oob="true"
+     data-current="{{ current_id or '' }}"
+     data-matte='{{ matte | tojson }}'></div>

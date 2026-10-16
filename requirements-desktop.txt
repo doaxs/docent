@@ -1,0 +1,7 @@
+# Docent.app (pywebview window + PyInstaller packaging). macOS only.
+-r requirements.txt
+pywebview>=5.3,<7
+pyobjc-core>=10.3,<13
+pyobjc-framework-Cocoa>=10.3,<13
+pyobjc-framework-WebKit>=10.3,<13
+pyinstaller>=6.10,<7

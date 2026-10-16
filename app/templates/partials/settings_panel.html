@@ -1,0 +1,49 @@
+{% from "partials/macros.html" import icon %}
+<div class="pop-h">
+    <div class="ph-ic">{{ icon("tv") }}</div>
+    <div><b>Your Frame</b><span>Samsung The Frame · connection settings</span></div>
+</div>
+<form class="pop-sec" hx-post="/settings/tv-ip" hx-target="#pop-settings" hx-swap="innerHTML">
+    <div class="pop-lbl">TV address
+        {% if state == 'connected' %}<span class="st ok"><i></i>Connected</span>
+        {% elif state == 'pairing' %}<span class="st bad"><i></i>Waiting for Allow</span>
+        {% elif state == 'no_ip' %}<span class="st"><i></i>Not set</span>
+        {% else %}<span class="st bad"><i></i>Not responding</span>{% endif %}
+    </div>
+    <div class="field">
+        <input name="tv_ip" value="{{ tv_ip }}" placeholder="192.168.1.20" spellcheck="false"
+               autocomplete="off" aria-label="TV IP address" required>
+        <button type="submit" class="btn sm primary">Connect</button>
+    </div>
+    <p class="help">Changed Wi-Fi or router? Find the new address on your TV in <b>Settings › Connection › Network Status</b>, or scan.</p>
+</form>
+<div class="pop-sec">
+    <button type="button" class="row-btn" hx-get="/discover" hx-target="#settings-found" hx-swap="innerHTML" hx-indicator="#settings-found">
+        {{ icon("search") }}<div><b>Scan for TVs</b><span>Find Frames on this network</span></div>{{ icon("right", "chev") }}
+    </button>
+    <div id="settings-found" class="found-list"><span class="scanning"><span class="spinner dark"></span>Scanning…</span></div>
+    <button type="button" class="row-btn" hx-post="/pair/reset" hx-target="#pop-settings" hx-swap="innerHTML">
+        {{ icon("link") }}<div><b>Pair again</b><span>Use if the TV stopped accepting this Mac</span></div>{{ icon("right", "chev") }}
+    </button>
+</div>
+<div class="pop-sec">
+    <div class="pop-lbl">TV frame</div>
+    <div class="bezels" id="bezel-set">
+        {% for key, name in [("black", "Black"), ("brown", "Brown"), ("sand", "Sand gold"), ("teak", "Teak"), ("white", "White")] %}
+        {# Each swatch previews its own bezel via the data-bezel scope. #}
+        <button type="button" class="bezel-btn" data-bezel-set="{{ key }}" title="{{ name }}">
+            <i class="bezel-sw" data-bezel="{{ key }}"></i><span>{{ name }}</span>
+        </button>
+        {% endfor %}
+    </div>
+    <p class="help">Match the bezel on your Frame — only changes how the TV looks here.</p>
+</div>
+<div class="pop-sec">
+    <div class="pop-lbl">Appearance</div>
+    <div class="seg full" id="theme-seg">
+        <span class="thumb"></span>
+        <button type="button" data-theme-set="system">System</button>
+        <button type="button" data-theme-set="light">Light</button>
+        <button type="button" data-theme-set="dark">Dark</button>
+    </div>
+</div>

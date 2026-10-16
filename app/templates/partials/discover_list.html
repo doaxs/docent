@@ -1,0 +1,18 @@
+{% from "partials/macros.html" import icon %}
+{% if found %}
+    {% for t in found %}
+    <div class="found">
+        <div class="f-ic">{{ icon("tv") }}</div>
+        <div class="f-t"><b>{{ t.name }}</b><span>{{ t.ip }}</span></div>
+        {% if t.ip == tv_ip %}
+            <span class="found-cur">{{ icon("check") }}This one</span>
+        {% else %}
+            <button type="button" class="btn primary sm"
+                    hx-post="/settings/tv-ip" hx-vals='{"tv_ip": "{{ t.ip }}"}' hx-swap="none"
+                    hx-disabled-elt="this">Connect</button>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="help">No Samsung TVs answered. Make sure the TV is on and on the same Wi-Fi as this Mac, then try again — or type its address.</p>
+{% endif %}

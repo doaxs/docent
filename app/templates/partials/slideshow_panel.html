@@ -1,0 +1,38 @@
+{% from "partials/macros.html" import icon %}
+{% set label = (duration // 60 ~ ' hr') if duration >= 60 else (duration ~ ' min') %}
+<form hx-post="/slideshow" hx-target="#pop-slideshow" hx-swap="innerHTML">
+    <div class="pop-h">
+        <div class="ph-ic slide">{{ icon("slides") }}</div>
+        <div><b>Slideshow</b>
+            <div class="slide-status{% if running %} run{% endif %}"><i></i>
+                {%- if running %}Running · every {{ label }} · {{ 'shuffle' if shuffle else 'in order' }}{% else %}Not running{% endif -%}
+            </div>
+        </div>
+    </div>
+    <div class="pop-sec">
+        <div class="pop-lbl">Change art every</div>
+        <div class="chips">
+            {% for o in [1, 3, 5, 10, 30, 60, 240] %}
+            <label>
+                <input type="radio" name="duration" value="{{ o }}" {% if o == duration %}checked{% endif %}>
+                <span>{{ o // 60 if o >= 60 else o }}<small>{{ 'hr' if o >= 60 else 'min' }}</small></span>
+            </label>
+            {% endfor %}
+        </div>
+        <p class="help">Rotates through your own photos.</p>
+    </div>
+    <div class="pop-sec">
+        <label class="toggle-row">
+            {{ icon("shuffle") }}<b>Shuffle</b>
+            <input type="checkbox" class="switch" name="shuffle" value="true" {% if shuffle %}checked{% endif %} aria-label="Shuffle">
+        </label>
+        <div class="pop-actions">
+            {% if running %}
+                <button type="button" class="btn" hx-post="/slideshow/stop" hx-target="#pop-slideshow" hx-swap="innerHTML">{{ icon("stop") }}Stop</button>
+                <button type="submit" class="btn primary">Update</button>
+            {% else %}
+                <button type="submit" class="btn primary">{{ icon("play") }}Start Slideshow</button>
+            {% endif %}
+        </div>
+    </div>
+</form>

@@ -1,0 +1,194 @@
+{% from "partials/macros.html" import icon, matte %}
+{# /status response: nothing but out-of-band swaps. static/app.js skips a
+   swap when the incoming data-key matches what's already on screen, so the
+   10s poll doesn't restart animations. #}
+{% set live = state == 'connected' %}
+{% set art_on = live and artmode != 'off' %}
+{% set ss = slideshow %}
+{% set every = (ss.interval // 60 ~ ' hr') if ss.interval >= 60 else (ss.interval ~ ' min') %}
+
+<div id="tv-state" hidden hx-swap-oob="true"
+     data-state="{{ state }}"
+     data-artmode="{{ artmode or '' }}"
+     data-current="{{ now.id if now else '' }}"
+     data-ip="{{ tv_ip }}"></div>
+
+<span id="tb-sub" class="pywebview-drag-region" hx-swap-oob="true">
+    {%- if state == 'no_ip' %}No TV connected
+    {%- elif state == 'pairing' %}Waiting for your TV to allow this Mac
+    {%- elif state == 'unreachable' %}Not responding · {{ tv_ip }}
+    {%- elif ss.running %}Slideshow · every {{ every }}
+    {%- else %}Samsung Frame · {{ tv_ip }}{% endif -%}
+</span>
+
+{# ---------------- TV screen ---------------- #}
+{% if state == 'no_ip' %}
+    {% set screen_key = 'setup' %}
+{% elif state == 'pairing' %}
+    {% set screen_key = 'pair' %}
+{% elif not live %}
+    {% set screen_key = 'asleep' %}
+{% elif not art_on %}
+    {% set screen_key = 'live' %}
+{% elif now %}
+    {% set screen_key = 'art:' ~ now.id ~ ':' ~ now.style ~ ':' ~ now.color %}
+{% else %}
+    {% set screen_key = 'art:unknown' %}
+{% endif %}
+<div id="screen-now" class="screen-layer" hx-swap-oob="true" data-key="{{ screen_key }}"
+     {% if now and art_on %}data-glow="/thumb/{{ now.id }}"{% endif %}>
+{% if state == 'no_ip' %}
+    <div class="osd setup">
+        <div class="radar still">{{ icon("wifi") }}<i></i></div>
+        <h3>Let’s find your Frame</h3>
+        <p>Turn the TV on — Art Mode counts — and make sure it’s on the same Wi-Fi as this Mac.</p>
+    </div>
+{% elif state == 'pairing' %}
+    <div class="osd pair">
+        <div class="tizen">
+            <div class="t-ic">{{ icon("link") }}</div>
+            <h4>Allow “Docent” to connect?</h4>
+            <p>A device on your network wants to control this TV.</p>
+            <div class="t-btns"><span>Deny</span><span class="focus">Allow</span></div>
+        </div>
+    </div>
+{% elif not live %}
+    <div class="osd asleep">
+        <div class="zz"><span>z</span><span>z</span><span>z</span></div>
+        <div class="osd-icon">{{ icon("moon") }}</div>
+        <h3>Your TV is asleep</h3>
+        <p>It isn’t answering at <code>{{ tv_ip }}</code>.</p>
+        <div class="osd-actions">
+            <button type="button" class="osd-btn primary" hx-post="/wake" hx-swap="none" hx-disabled-elt="this">
+                {{ icon("power") }}Wake TV
+            </button>
+        </div>
+    </div>
+{% elif not art_on %}
+    <div class="osd live">
+        <span class="live-tag">LIVE TV</span>
+        <div class="osd-icon">{{ icon("tv") }}</div>
+        <h3>Watching TV</h3>
+        <p>Turn on Art Mode to show your art.</p>
+        <div class="osd-actions">
+            <button type="button" class="osd-btn primary" hx-post="/artmode" hx-vals='{"on": "1"}' hx-swap="none" hx-disabled-elt="this">
+                {{ icon("frame") }}Turn on Art Mode
+            </button>
+        </div>
+    </div>
+{% elif now %}
+    {{ matte("/thumb/" ~ now.id, now.style, now.matte_hex) }}
+{% else %}
+    <div class="osd asleep">
+        <div class="osd-icon">{{ icon("frame") }}</div>
+        <h3>Showing art</h3>
+        <p>Your TV didn’t say which piece. Pick one below to take over.</p>
+    </div>
+{% endif %}
+</div>
+
+{# ---------------- Info column ---------------- #}
+<div id="info-now" class="info" hx-swap-oob="true"
+     data-key="{{ screen_key }}:{{ now.name if now else '' }}">
+{% if state == 'no_ip' %}
+    <div class="eyebrow">{{ icon("sun") }}Welcome</div>
+    <h1 class="title">Connect your Frame</h1>
+    <p class="body-copy">This Mac will find your TV on the network. You’ll approve it once on the TV, then you’re set.</p>
+    <div class="actions">
+        <button type="button" class="btn primary big" hx-get="/discover" hx-target="#found-list" hx-swap="innerHTML" hx-disabled-elt="this" hx-indicator="#found-list">
+            {{ icon("search") }}Scan for TV
+        </button>
+        <button type="button" class="btn big" data-act="settings">Enter IP…</button>
+    </div>
+    <div id="found-list" class="found-list"><span class="scanning"><span class="spinner dark"></span>Looking for TVs on your network…</span></div>
+    <div class="hint-kbd">Tip: your TV’s address is in Settings › Connection › Network Status.</div>
+{% elif state == 'pairing' %}
+    <div class="eyebrow warn"><span class="dot"></span>Waiting for your TV</div>
+    <h1 class="title">Look at your TV</h1>
+    <p class="body-copy">A prompt is on the screen. Press <b>Allow</b> with your remote — this page connects on its own.</p>
+    <div class="pair-hint">
+        <div class="remote"><i></i><i></i></div>
+        <div class="pair-col">
+            <ol class="pair-steps">
+                <li>1 · Pick up the Samsung remote</li>
+                <li>2 · Highlight <b>Allow</b></li>
+                <li>3 · Press the center button</li>
+            </ol>
+            <div class="countdown" title="The prompt stays up for about 30 seconds"><i></i></div>
+            <button type="button" class="link-btn" hx-post="/pair/reset" hx-swap="none">{{ icon("refresh") }}Didn’t see it? Show it again</button>
+        </div>
+    </div>
+{% elif not live %}
+    <div class="eyebrow warn"><span class="dot"></span>TV is asleep</div>
+    <h1 class="title">Can’t reach your TV</h1>
+    <p class="body-copy">Press <b>Wake TV</b> on the screen. If that doesn’t work, the TV may be fully powered off or its network address changed.</p>
+    <div class="actions">
+        <button type="button" class="btn big" data-act="settings">{{ icon("wifi") }}Change Address…</button>
+    </div>
+{% elif not art_on %}
+    <div class="eyebrow">{{ icon("tv") }}Art Mode is off</div>
+    <h1 class="title">Your TV is showing TV</h1>
+    <p class="body-copy">Turn on Art Mode to go back to your art. You can still browse and preview below.</p>
+{% elif now %}
+    <div class="eyebrow"><span class="live"></span>On your TV now</div>
+    <h1 class="title"{% if not now.is_store %} data-act="rename" data-id="{{ now.id }}" title="Click to rename"{% endif %}>{{ now.name }}</h1>
+    <div class="meta">
+        {% if now.is_store %}<span class="badge-store">ART STORE</span><span>Samsung collection</span>
+        {% else %}<span>Your photo</span>{% if now.uploaded_at %}<span class="sep">·</span><span>Added {{ now.uploaded_at | time_ago }}</span>{% endif %}{% endif %}
+    </div>
+    <button type="button" class="matte-chip" data-act="adjust" data-id="{{ now.id }}" title="Change matte">
+        <span class="mc-frame">{{ matte("/thumb/" ~ now.id, now.style, now.matte_hex) }}</span>
+        {{ now.matte_label }}{{ icon("right") }}
+    </button>
+    <div class="actions">
+        <button type="button" class="btn big" data-act="adjust" data-id="{{ now.id }}">{{ icon("frame") }}Adjust Matte</button>
+        <button type="button" class="btn big icon" data-act="menu" data-id="{{ now.id }}" aria-label="More">{{ icon("dots") }}</button>
+    </div>
+{% else %}
+    <div class="eyebrow"><span class="live"></span>On your TV now</div>
+    <h1 class="title">Art Mode</h1>
+    <p class="body-copy">Pick a piece below to preview it here, then press <b>Show on TV</b>.</p>
+{% endif %}
+</div>
+
+{# ---------------- Control capsule ---------------- #}
+<div id="capsule" class="capsule glass{% if not live %} disabled{% endif %}" hx-swap-oob="true">
+    <div class="cap-status">
+        {% if live %}
+            <span class="pill ok"><span class="dot"></span>On · {{ ('Slideshow' if ss.running else 'Art Mode') if art_on else 'Watching TV' }}</span>
+            <span class="tvname">{{ tv_ip }}</span>
+        {% elif state == 'unreachable' %}
+            <span class="pill warn"><span class="dot"></span>Asleep</span>
+            <button type="button" class="btn primary sm" hx-post="/wake" hx-swap="none" hx-disabled-elt="this">Wake</button>
+        {% elif state == 'pairing' %}
+            <span class="pill warn"><span class="dot"></span>Waiting for Allow…</span>
+        {% else %}
+            <span class="pill off"><span class="dot"></span>No TV yet</span>
+            <button type="button" class="btn primary sm" data-act="settings">Set Up</button>
+        {% endif %}
+    </div>
+    <div class="cap-rows">
+        <div class="cap-row">
+            <span class="cap-ic art">{{ icon("frame") }}</span>
+            <div class="cap-txt"><b>Art Mode</b><span>{{ '—' if not live else ('Showing art' if art_on else 'Off — watching TV') }}</span></div>
+            <button type="button" class="switch" role="switch" aria-label="Art Mode"
+                    aria-checked="{{ 'true' if art_on else 'false' }}"
+                    hx-post="/artmode" hx-vals='{"on": "{{ 0 if art_on else 1 }}"}' hx-swap="none"></button>
+        </div>
+        <div class="cap-row" id="slide-row">
+            <span class="cap-ic slide">{{ icon("slides") }}</span>
+            <div class="cap-txt"><b>Slideshow</b>
+                <span class="{% if live and ss.running %}run{% endif %}">{{ '—' if not live else ('Every ' ~ every ~ (' · Shuffle' if ss.shuffle else '') if ss.running else 'Off') }}</span>
+            </div>
+            <button type="button" class="cap-more" data-act="slideshow">Options{{ icon("right") }}</button>
+            <button type="button" class="switch" role="switch" aria-label="Slideshow"
+                    aria-checked="{{ 'true' if live and ss.running else 'false' }}"
+                    hx-post="/slideshow/toggle" hx-swap="none"></button>
+        </div>
+        <div class="cap-row">
+            <span class="cap-ic power">{{ icon("power") }}</span>
+            <div class="cap-txt"><b>TV Power</b><span>{{ 'On' if live else '—' }}</span></div>
+            <button type="button" class="btn sm" hx-post="/power/off" hx-swap="none" hx-disabled-elt="this">Turn Off</button>
+        </div>
+    </div>
+</div>

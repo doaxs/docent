@@ -1,0 +1,12 @@
+venv
+.venv/
+data/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+build/
+dist/
+tv_token.txt
+CLAUDE.local.md
+demo-data/

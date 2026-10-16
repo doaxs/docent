@@ -1,0 +1,16 @@
+{% macro icon(name, cls="") -%}
+<svg class="i {{ cls }}" aria-hidden="true"><use href="#i-{{ name }}"/></svg>
+{%- endmacro %}
+
+{# Draws an artwork inside its matte, scaled to whatever box contains it.
+   Mirrors matteHTML() in static/app.js — keep the two in sync. #}
+{% macro matte(src, style, hex) -%}
+{%- set bg = "background-image:url('" ~ src ~ "')" -%}
+<div class="m m-{{ style }}" style="--matte:{{ '#000' if style == 'none' else hex }}">
+    {%- if style in ('triptych', 'mix') -%}
+        <div class="a"><div class="p" style="{{ bg }}"></div><div class="p" style="{{ bg }}"></div><div class="p" style="{{ bg }}"></div></div>
+    {%- else -%}
+        <div class="a{% if style in ('modern', 'modernthin', 'modernwide', 'squares', 'panoramic') %} bevel{% endif %}" style="{{ bg }}"></div>
+    {%- endif -%}
+</div>
+{%- endmacro %}

@@ -1,0 +1,9 @@
+# Tested versions. samsungtvws is pinned exactly: the TV API is unofficial and
+# Docent works around version-specific behavior (see docs/FIRMWARE.md).
+samsungtvws==3.0.6
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+jinja2>=3.1,<4
+python-multipart>=0.0.9,<0.1
+pillow>=11,<13
+pydantic-settings>=2.0,<3

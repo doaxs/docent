@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import icon %}
+{% block content %}
+<div class="app" id="app" data-state="loading" data-mode="now" data-view="tv">
+    <div class="wall"></div>
+
+    {# ---------------- Toolbar ---------------- #}
+    {# pywebview-drag-region: drags the window in the desktop app's
+       transparent-titlebar mode (only when the element itself is clicked). #}
+    <header class="toolbar pywebview-drag-region">
+        <div class="tb-title pywebview-drag-region">
+            <b class="pywebview-drag-region">Docent</b>
+            <span id="tb-sub" class="pywebview-drag-region">Connecting…</span>
+        </div>
+        <div class="tb-spacer pywebview-drag-region"></div>
+        <div class="tb-group glass">
+            <button type="button" class="tb-btn accent" id="add-btn" data-needs-tv
+                    title="Add photos from your Mac — or drop them anywhere">
+                {{ icon("plus") }}Add Art
+            </button>
+            <span class="tb-sep"></span>
+            <button type="button" class="tb-btn icon" id="gear-btn" title="TV settings" aria-label="TV settings"
+                    hx-get="/settings" hx-target="#pop-settings" hx-swap="innerHTML">
+                {{ icon("gear") }}
+            </button>
+        </div>
+        <input type="file" id="file-input" accept="image/*" multiple hidden>
+    </header>
+
+    {# ---------------- Hero: the TV ---------------- #}
+    <section class="stage">
+        <div class="tv-col">
+            <div class="glow" id="glow"></div>
+            <div class="preview-flag glass">{{ icon("eye") }}<span><b>Previewing</b> — not on TV yet</span></div>
+            <div class="tv-wrap">
+                <div class="tv">
+                    <div class="screen" id="screen">
+                        {# Server-owned: refreshed by the /status poll. #}
+                        <div id="screen-now" class="screen-layer" data-key="loading">
+                            <div class="osd setup">
+                                <div class="radar">{{ icon("wifi") }}<i></i></div>
+                                <h3>Connecting to your Frame…</h3>
+                            </div>
+                        </div>
+                        {# Client-owned: what you're previewing before you commit. #}
+                        <div id="screen-preview" class="screen-layer"></div>
+                        <div class="glare"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="tray glass" id="tray" aria-label="Matte">
+                <div class="tray-row">
+                    <div class="tray-label">Matte</div>
+                    <div class="styles" id="styles"></div>
+                </div>
+                <div class="tray-row">
+                    <div class="tray-label">Color</div>
+                    <div class="colors" id="colors"></div>
+                    <div class="color-name" id="color-name"></div>
+                </div>
+            </div>
+        </div>
+
+        <aside class="info-col">
+            <div id="info-now" class="info" data-key="loading">
+                <div class="eyebrow">Connecting…</div>
+            </div>
+            <div id="info-preview" class="info"></div>
+            <div id="capsule" class="capsule glass disabled"></div>
+        </aside>
+    </section>
+
+    {# ---------------- Library: grid under the TV, or full-window grid with sidebar ---------------- #}
+    <section class="library" id="library-panel">
+        <aside class="lib-side">
+            <button type="button" class="side-now" id="side-now" data-act="back-to-tv" title="Back to your TV">
+                <span class="side-now-th" id="side-now-th"></span>
+                <span class="side-now-txt"><small>On your TV</small><b id="side-now-name">—</b></span>
+            </button>
+            <div class="side-label">Library</div>
+            <nav class="side-list" role="tablist" aria-label="Filter">
+                <button type="button" data-f="all" class="on">{{ icon("stack") }}All Art<span class="side-count" id="count-all"></span></button>
+                <button type="button" data-f="mine">{{ icon("photo") }}My Photos<span class="side-count" id="count-mine"></span></button>
+                <button type="button" data-f="store">{{ icon("bag") }}Art Store<span class="side-count" id="count-store"></span></button>
+            </nav>
+            <div class="side-hint">{{ icon("tray") }}Drop photos anywhere in this window to add them to your TV.</div>
+        </aside>
+
+        <div class="lib-main">
+            <div class="lib-head">
+                <h2 id="lib-title">Library</h2>
+                <span class="lib-count" id="lib-count"></span>
+                <span class="lib-note" id="lib-note" hidden>{{ icon("warn") }}From your last connection · wake the TV to make changes</span>
+                <div class="lib-spacer"></div>
+                <label class="search">
+                    {{ icon("search") }}
+                    <input type="search" id="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search art">
+                    <kbd>⌘F</kbd>
+                </label>
+                <div class="seg" id="filter-seg" role="tablist" aria-label="Filter">
+                    <span class="thumb"></span>
+                    <button type="button" data-f="all" class="on">All</button>
+                    <button type="button" data-f="mine">Mine</button>
+                    <button type="button" data-f="store">Art Store</button>
+                </div>
+                <div class="select-wrap">
+                    <select id="sort" name="sort" aria-label="Sort"
+                            hx-get="/library" hx-target="#library" hx-swap="innerHTML" hx-trigger="change">
+                        <option value="newest">Newest</option>
+                        <option value="name">Name A–Z</option>
+                        <option value="current">On TV first</option>
+                    </select>
+                    {{ icon("down") }}
+                </div>
+                <div class="seg icons" id="view-seg" role="tablist" aria-label="Layout">
+                    <span class="thumb"></span>
+                    <button type="button" data-view="tv" class="on" title="Library with your TV" aria-label="Library with your TV">{{ icon("tv") }}</button>
+                    <button type="button" data-view="grid" title="Full library — see everything" aria-label="Full library">{{ icon("grid") }}</button>
+                </div>
+            </div>
+            <div class="grid-wrap">
+                <div id="library" class="art-grid"
+                     hx-get="/library"
+                     hx-trigger="load, currentChanged from:body"
+                     hx-include="#sort"
+                     hx-swap="innerHTML">
+                    {% for _ in range(6) %}<div class="tile skel"><div class="th"></div><div class="cap"><b></b><span></span></div></div>{% endfor %}
+                </div>
+                <div class="lib-empty" id="no-match" hidden>
+                    <div><b>No matches</b><p>Nothing in your library matches “<span id="no-match-q"></span>”.</p></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {# ---------------- Popovers, dialogs, overlays ---------------- #}
+    <div class="popover pop-settings" id="pop-settings" role="dialog" aria-label="TV settings"></div>
+    <div class="popover pop-slideshow" id="pop-slideshow" role="dialog" aria-label="Slideshow"></div>
+    <div class="popover menu" id="menu" role="menu"></div>
+
+    <div class="scrim" id="scrim">
+        <div class="alert glass" role="alertdialog" aria-modal="true" aria-labelledby="al-title">
+            <div class="al-th" id="al-th"></div>
+            <b id="al-title">Delete from your TV?</b>
+            <p id="al-body">This removes it from your Frame. This can’t be undone.</p>
+            <div class="al-btns">
+                <button type="button" class="btn" id="al-cancel">Cancel</button>
+                <button type="button" class="btn destructive" id="al-ok">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="drop" id="drop">
+        <div class="drop-box">
+            <div class="drop-ic">{{ icon("tray") }}</div>
+            <b>Drop to add to your Frame</b>
+            <span>Any shape works — we fit it to 4K and send it to your TV.</span>
+        </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    {# Status poller. Its response is all out-of-band swaps (screen, info,
+       capsule, toolbar subtitle, connection state). #}
+    <div id="status-poll" hidden
+         hx-get="/status"
+         hx-trigger="load, every 10s, refreshStatus from:body"
+         hx-swap="none"></div>
+    <div id="tv-state" hidden data-state="loading"></div>
+    <div id="lib-data" hidden data-matte="{}"></div>
+</div>
+{% endblock %}
